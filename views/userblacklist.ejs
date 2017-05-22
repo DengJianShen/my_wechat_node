@@ -1,0 +1,139 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="userblacklist">
+  <table class="table">
+    <thead>
+    <tr>
+      <th>序号</th>
+      <th>昵称</th>
+      <th>性别</th>
+      <th>头像</th>
+      <th>分组</th>
+      <th>备注</th>
+      <th>关注时间</th>
+      <th>openid</th>
+      <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr v-for="(msg,index) in msg">
+      <td><input type="checkbox" :value="msg.openid" v-model="openids">{{index+1}}</td>
+      <td>{{msg.nickname}}</td>
+      <td v-if="msg.sex==0">未知</td>
+      <td v-else-if="msg.sex==1">男</td>
+      <td v-else-if="msg.sex==2">女</td>
+      <td><img :src="msg.headimgurl" width="50" height="50"></td>
+      <td v-if="msg.groupid==0">未分组</td>
+      <td v-else>{{msg.groupid}}</td>
+      <td v-if="msg.remark==''">无</td>
+      <td v-else>{{msg.remark}}</td>
+      <td>{{msg.subscribe_time | formatTime}}</td>
+      <td>{{msg.openid}}</td>
+      <td>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-outline" @click="delblack(msg.openid,index)">取黑</button>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+  <div class="btn-group">
+    <button class="btn btn-primary btn-outline" @click="batchCancel()">批量取黑</button>
+  </div>
+  <nav aria-label="..." class="common-pagination">
+    <ul class="pagination">
+      <li><span @click="gotoPage(page-1)">«</span></li>
+      <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+      <li><span @click="gotoPage(page+1)">»</span></li>
+    </ul>
+  </nav>
+</div>
+<script>
+  new Vue({
+    el: '#userblacklist',
+    data() {
+      return {
+        totalpage: 0,
+        page: 1,
+        msg: '',
+        openids:[]
+      };
+    },
+    created() {
+      var that = this;
+      that.$http.post('/user/blacklist',{page:1}).then(response => {
+        that.msg = response.body.user_info_list;
+        that.totalpage = Math.ceil(parseInt(response.body.total) / parseInt(response.body.limit));
+      }, response => {
+        alert('请求失败');
+      });
+    },
+    methods:{
+      batchCancel(){
+        var that = this;
+        if(that.openids.length==0){
+          alert('请选择用户');
+        }else{
+          that.$http.post('/user/delblack',{openid:that.openids}).then(response => {
+            if(response.body.errcode==0){
+              alert('取黑成功');
+              that.msg.forEach((item,index)=>{
+                if(item == openids[index]){
+                  that.msg[index].splice(index, 1)
+                }
+              })
+              that.msg.splice(index, 1);
+              that.openids = [];
+            } else{
+              alert('取黑失败');
+            }
+          }, response => {
+            alert('取黑失败');
+          });
+        }
+      },
+      delblack(openid,index){
+        var openid = openid;
+        var that = this;
+        that.$http.post('/user/delblack',{openid:openid}).then(response => {
+            if(response.body.errcode==0){
+               alert('取黑成功');
+              that.msg.splice(index, 1);
+            } else{
+              alert('取黑失败');
+            }
+        }, response => {
+          alert('取黑失败');
+        });
+      },
+      gotoPage(page){
+        var that = this;
+        if (page < 1){
+          alert('当前已经是第一页');
+          return false;
+        } else if (page > that.totalpage){
+          alert('当前已经是最后一页');
+          return false;
+        } else if (page == that.page){
+          alert('已是当前页');
+          return false;
+        } else {
+          that.$http.post('/user/outputlist',{page:page}).then(response => {
+            that.msg = response.body;
+            that.totalpage = Math.ceil(parseInt(response.body.total) / parseInt(response.body.limit));
+            that.page = page;
+          }, response => {
+            alert('请求失败');
+          });
+        }
+      }
+    },
+    filters: {
+      formatTime: function (value) {
+        return moment(parseInt(value)*1000).format('YYYY/MM/DD')
+      }
+    }
+  })
+</script>
+</body>
+</html>

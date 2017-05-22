@@ -1,0 +1,123 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="shorturl">
+    <div class="form-inline">
+        <div class="form-group">
+            <input type="text" class="form-control" placeholder="链接名称" v-model="newurl.urlname">
+            <input type="text" class="form-control" placeholder="链接说明" v-model="newurl.urlexplain">
+            <input type="text" class="form-control" placeholder="长链接" v-model="newurl.originalurl">
+            <button class="btn btn-success btn-outline" @click="shorturl()">转换</button>
+            <p>{{newurl.shorturl}}</p>
+        </div>
+    </div>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>名称</th>
+            <th>说明</th>
+            <th>创建时间</th>
+            <th>原链接</th>
+            <th>短链接</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item,index) in urls">
+            <td>{{item.urlname}}</td>
+            <td>{{item.urlexplain}}</td>
+            <td>{{item.createAt | formatTime}}</td>
+            <td>{{item.originalurl}}</td>
+            <td>{{item.shorturl}}</td>
+            <td>
+                <button class="btn btn-danger btn-outline" @click="deleteshort(item._id,index)">删除</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <nav aria-label="..." class="common-pagination">
+        <ul class="pagination">
+            <li><span @click="gotoPage(page-1)">«</span></li>
+            <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+            <li><span @click="gotoPage(page+1)">»</span></li>
+        </ul>
+    </nav>
+</div>
+<script>
+    new Vue({
+        el: '#shorturl',
+        data() {
+            return {
+                newurl: {
+                    urlname: '',
+                    urlexplain: '',
+                    originalurl: '',
+                    shorturl: '',
+                    createAt: ''
+                },
+                totalpage: 0,
+                page: 1,
+                urls: []
+            }
+        },
+        methods: {
+            gotoPage(page){
+                var that = this;
+                if (page < 1){
+                    alert('当前已经是第一页');
+                    return false
+                } else if (page > that.totalpage){
+                    alert('当前已经是最后一页');
+                    return false
+                } else if(page == that.page){
+                    alert('已经是当前页');
+                    return false
+                } else {
+                    that.$http.post('/shorturl/outputlist',{page:page}).then(response => {
+                        that.totalpage = response.body.totalpage;
+                        that.urls = response.body.urls;
+                        that.page = page;
+                    }, response => {
+                        alert('请求失败');
+                    });
+                }
+            },
+            deleteshort(id,index){
+                var that = this;
+                that.$http.post('/shorturl/delete', {id:id}).then(response => {
+                    that.urls.splice(index, 1);
+                    alert('删除成功');
+                }, response => {
+                    alert('删除失败');
+                });
+            },
+            shorturl(){
+                var that = this;
+                that.$http.post('/shorturl/create', {urlname: that.newurl.urlname, urlexplain: that.newurl.urlexplain, url: that.newurl.originalurl}).then(response => {
+                    if(response.body.errcode==0){
+                        that.urls.unshift(response.body);
+                        alert('转换成功');
+                    }
+                }, response => {
+                    alert('转换失败');
+                });
+            }
+        },
+        created() {
+            var that = this
+            that.$http.post('/shorturl/outputlist', {page: 1}).then(response => {
+                that.totalpage = response.body.totalpage;
+                that.urls = response.body.urls;
+            }, response => {
+                alert('请求失败');
+            });
+        },
+        components: {},
+        filters: {
+            formatTime: function (value) {
+                return moment(value).format('YYYY/MM/DD')
+            }
+        }
+    })
+</script>
+</body>
+</html>

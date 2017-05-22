@@ -1,0 +1,202 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="shorturl">
+    <div class="float-qrcode" ref="float_qrcode"></div>
+    <div class="form-inline">
+        <div class="form-group">
+            <button class="btn btn-success btn-outline" data-toggle="modal" data-target="#createModal">新建二维码</button>
+        </div>
+    </div>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>场景id</th>
+            <th>场景字符</th>
+            <th>说明</th>
+            <th>类型</th>
+            <th>二维码</th>
+            <th>创建日期</th>
+            <th>有效期至</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item,index) in qrcodes">
+            <td v-if="item.qrcodetype!='QR_LIMIT_STR_SCENE'">{{item.sceneid}}</td>
+            <td v-else>空</td>
+            <td v-if="item.qrcodetype=='QR_LIMIT_STR_SCENE'">{{item.scenestr}}</td>
+            <td v-else>空</td>
+            <td>{{item.sceneexplain}}</td>
+
+            <td v-if="item.qrcodetype=='QR_SCENE'">临时二维码</td>
+            <td v-else-if="item.qrcodetype=='QR_LIMIT_SCENE'">永久二维码</td>
+            <td v-else-if="item.qrcodetype=='QR_LIMIT_STR_SCENE'">永久字符串</td>
+
+            <td><img width="50" :src="item.qrcodeurl" @mouseover="enlargeQrcode(item.qrcodeurl,$event)" @mouseout="hideQrcode()"></td>
+            <td>{{item.createAt | formatTime}}</td>
+            <td v-if="item.qrcodetype=='QR_SCENE'">{{item.effectivetime | formatTime}}</td>
+            <td v-else>永久</td>
+            <td>
+                <button class="btn btn-danger btn-outline" v-if="datenow > item.effectivetime && item.qrcodetype=='QR_SCENE'">不可用</button>
+                <button class="btn btn-success btn-outline" v-else>可用</button>
+            </td>
+            <td>
+                <button class="btn btn-danger btn-outline" @click="deleteqrcode(item._id,index)">删除</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <nav aria-label="..." class="common-pagination">
+        <ul class="pagination">
+            <li><span @click="gotoPage(page-1)">«</span></li>
+            <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+            <li><span @click="gotoPage(page+1)">»</span></li>
+        </ul>
+    </nav>
+
+    <div class="modal fade" id="createModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>标题</label>
+                        <input type="text" class="form-control" type="text" v-model="newqrcode.scenename"/>
+                    </div>
+                    <div class="form-group">
+                        <label>说明</label>
+                        <input type="text" class="form-control" type="text" v-model="newqrcode.sceneexplain"/>
+                    </div>
+                    <div class="form-group">
+                        <label>类型选择</label>
+                        <select v-model="newqrcode.qrcodetype" class="form-control">
+                            <option v-for="option in typeoptions" :value="option.value">
+                                {{ option.text }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="newqrcode.qrcodetype != 'QR_LIMIT_STR_SCENE'">
+                        <label>场景id</label>
+                        <input type="number" class="form-control" type="text" v-model="newqrcode.sceneid"/>
+                    </div>
+                    <div class="form-group" v-if="newqrcode.qrcodetype == 'QR_SCENE'">
+                        <label>有效期/天</label>
+                        <input type="number" class="form-control" type="text" v-model="newqrcode.effectivetime"/>
+                    </div>
+                    <div class="form-group" v-if="newqrcode.qrcodetype == 'QR_LIMIT_STR_SCENE'">
+                        <label>场景字符串</label>
+                        <input type="text" class="form-control" type="text" v-model="newqrcode.scenestr"/>
+                    </div>
+                    <div class="clearfix">
+                        <button class="btn btn-default pull-left" ref="close_btn" data-dismiss="modal">关闭</button>
+                        <button class="btn btn-success pull-right" @click="createQrcode()">提交</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script>
+    new Vue({
+        el: '#shorturl',
+        data() {
+            return {
+                newqrcode: {
+                    sceneid: '',
+                    scenename: '',
+                    sceneexplain: '',
+                    qrcodetype: 'QR_SCENE',
+                    effectivetime: '',
+                    scenestr: ''
+                },
+                datenow: new Date().getTime(),
+                totalpage: 0,
+                page: 1,
+                qrcodes: [],
+                typeoptions: [
+                    {text: '临时二维码', value: 'QR_SCENE'},
+                    {text: '永久二维码', value: 'QR_LIMIT_SCENE'},
+                    {text: '永久字符串', value: 'QR_LIMIT_STR_SCENE'},
+                ],
+            }
+        },
+        methods: {
+            enlargeQrcode(img, This){
+                var that = this;
+                that.$refs.float_qrcode.style.backgroundImage = 'url(' + img + ')';
+                that.$refs.float_qrcode.style.top = (This.target.getBoundingClientRect().top+50) + 'px';
+                that.$refs.float_qrcode.style.left = (This.target.getBoundingClientRect().left) + 'px';
+                that.$refs.float_qrcode.style.display = 'block';
+            },
+            hideQrcode(){
+                var that = this;
+                that.$refs.float_qrcode.style.display = 'none';
+            },
+            createQrcode(){
+                var that = this;
+                that.$http.post('/qrcode/create', that.newqrcode).then(response => {
+                    alert('创建成功');
+                    that.qrcodes.unshift(response.body);
+                    that.$refs.close_btn.click();
+                    that.newqrcode = {
+                        sceneid: '',
+                        scenename: '',
+                        sceneexplain: '',
+                        qrcodetype: 'QR_SCENE',
+                        effectivetime: '',
+                        scenestr: ''
+                    }
+                }, response => {
+                    alert('创建失败');
+                });
+            },
+            gotoPage(page){
+                var that = this;
+                if (page < 1) {
+                    alert('当前已经是第一页');
+                    return false
+                } else if (page > that.totalpage) {
+                    alert('当前已经是最后一页');
+                    return false
+                } else if (page == that.page) {
+                    alert('已经是当前页');
+                    return false
+                } else {
+                    that.$http.post('/qrcode/outputlist', {page: page}).then(response => {
+                        that.totalpage = response.body.totalpage;
+                        that.qrcodes = response.body.qrcodes;
+                        that.page = page;
+                    }, response => {
+                        alert('请求失败');
+                    });
+                }
+            },
+            deleteqrcode(id, index){
+                var that = this;
+                that.$http.post('/qrcode/delete', {id: id}).then(response => {
+                    that.qrcodes.splice(index, 1);
+                    alert('删除成功');
+                }, response => {
+                    alert('删除失败');
+                });
+            },
+        },
+        created() {
+            var that = this
+            that.$http.post('/qrcode/outputlist', {page: 1}).then(response => {
+                that.totalpage = response.body.totalpage;
+                that.qrcodes = response.body.qrcodes;
+            }, response => {
+                alert('请求失败');
+            });
+        },
+        filters: {
+            formatTime(value) {
+                return moment(value).format('YYYY/MM/DD')
+            }
+        }
+    })
+</script>
+</body>
+</html>

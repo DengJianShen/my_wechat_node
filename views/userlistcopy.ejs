@@ -1,0 +1,93 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="userlist">
+  <table class="table">
+    <thead>
+    <tr>
+      <th>昵称</th>
+      <th>性别</th>
+      <th>头像</th>
+      <th>分组</th>
+      <th>备注</th>
+      <th>关注时间</th>
+      <th>openid</th>
+      <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr v-for="msg in msg.user_info_list">
+      <td>{{msg.nickname}}</td>
+      <td v-if="msg.sex==0">未知</td>
+      <td v-else-if="msg.sex==1">男</td>
+      <td v-else-if="msg.sex==2">女</td>
+      <td><img :src="msg.headimgurl"></td>
+      <td>{{msg.groupid}}</td>
+      <td>{{msg.subscribe_time}}</td>
+      <td>{{msg.openid}}</td>
+      <td>
+        <div class="btn-group">
+          <button v-if="item.using==0" class="btn btn-primary btn-outline">未应用</button>
+          <button v-else class="btn btn-success btn-outline">已应用</button>
+          <button class="btn btn-warning btn-outline">编辑</button>
+          <button class="btn btn-danger btn-outline">删除</button>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+  <nav aria-label="..." class="common-pagination">
+    <ul class="pagination">
+      <li><span @click="gotoPage(page-1)">«</span></li>
+      <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+      <li><span @click="gotoPage(page-1)">»</span></li>
+    </ul>
+  </nav>
+</div>
+<script>
+  new Vue({
+    el: '#userlist',
+    data() {
+      return {
+        totalpage: 0,
+        page: 1,
+        msg: {}
+      };
+    },
+    created() {
+      var that = this;
+      that.$http.post('/user/outputlist',{page:that.page}).then(response => {
+        that.msg = response.body;
+        that.totalpage = Math.ceil(parseInt(response.body.total) / parseInt(response.body.limit));
+      }, response => {
+        alert('请求失败');
+      });
+    },
+    methods:{
+      gotoPage(page){
+        var that = this;
+        var page = page;
+        if (page = 0){
+          alert('当前已经是第一页');
+        } else if (page = that.totalpage){
+          alert('当前已经是最后一页');
+        } else {
+          that.$http.post('/user/outputlist',{page:page}).then(response => {
+            that.msg = response.body;
+            that.totalpage = Math.ceil(parseInt(response.body.total) / parseInt(response.body.limit));
+          }, response => {
+            alert('请求失败');
+          });
+        }
+        that.page = page;
+        console.log(page);
+      }
+    },
+    filters: {
+      formatTime: function (value) {
+        return moment(value).format('YYYY/MM/DD')
+      }
+    }
+  })
+</script>
+</body>
+</html>

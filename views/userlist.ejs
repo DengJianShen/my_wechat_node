@@ -1,0 +1,370 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="userlist">
+    <table class="table">
+        <thead>
+        <tr>
+            <th>序号</th>
+            <th>昵称</th>
+            <th>性别</th>
+            <th>头像</th>
+            <th>分组</th>
+            <th>备注</th>
+            <th>关注时间</th>
+            <th>openid</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item,index) in msg">
+            <td><input type="checkbox" :value="item.openid" v-model="openids">{{index+1}}</td>
+            <td>{{item.nickname}}</td>
+            <td v-if="item.sex==0">未知</td>
+            <td v-else-if="item.sex==1">男</td>
+            <td v-else-if="item.sex==2">女</td>
+            <td><img :src="item.headimgurl" width="50" height="50"></td>
+            <td v-if="item.groupid==0">未分组</td>
+            <td v-else>{{item.groupid}}</td>
+            <td v-if="item.modify=='true'">
+                <div class="form-inline">
+                    <input type="text" class="form-control" v-model="newremark" placeholder="输入新备注名">
+                    <div class="btn btn-success margin-left-5" @click="updateremark(item.openid,newremark,index)">确定</div>
+                </div>
+            </td>
+            <td v-else-if="item.modify=='false'&&item.remark==''">无</td>
+            <td v-else-if="item.modify=='false'&&item.remark!=''">{{item.remark}}</td>
+            <td>{{item.subscribe_time | formatTime}}</td>
+            <td>{{item.openid}}</td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-outline" data-toggle="modal" data-target="#sendModal" @click="sendOneInit(item.openid)">发送</button>
+                    <button class="btn btn-info btn-outline" data-toggle="modal" data-target="#groupModal" @click="sendOneInit(item.openid)">移动</button>
+                    <button class="btn btn-warning btn-outline" @click="showremark(index)" v-if="item.modify=='false'||!item.modify">备注</button>
+                    <button class="btn btn-warning btn-outline" @click="remarking()" v-else="item.modify=='true'">备注中</button>
+                    <button class="btn btn-danger btn-outline" @click="doblack(item.openid,index)">拉黑</button>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="btn-group">
+        <button class="btn btn-primary btn-outline" :data-toggle="batchstate" data-target="#sendModal" @click="batchInit()">批量发送</button>
+        <button class="btn btn-warning btn-outline" :data-toggle="batchstate" data-target="#groupModal" @click="batchInit()">批量移动</button>
+        <button class="btn btn-danger btn-outline" @click="batchBlack()">批量拉黑</button>
+    </div>
+    <nav aria-label="..." class="common-pagination">
+        <ul class="pagination">
+            <li><span @click="gotoPage(page-1)">«</span></li>
+            <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+            <li><span @click="gotoPage(page+1)">»</span></li>
+        </ul>
+    </nav>
+    <div class="modal fade" id="sendModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>回复类型类型</label>
+                        <select v-model="sendmsg.type" class="form-control">
+                            <option v-for="option in typeoptions" :value="option.value">
+                                {{ option.text }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='text'">
+                        <label>文本内容</label>
+                        <input type="text" class="form-control" v-model="sendmsg.text.content">
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='image'">
+                        <label>图片素材id</label>
+                        <input type="text" class="form-control" v-model="sendmsg.image.mediaId">
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='voice'">
+                        <label>语音素材id</label>
+                        <input type="text" class="form-control" v-model="sendmsg.voice.mediaId">
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='video'">
+                        <label>视频标题</label>
+                        <input type="text" class="form-control" v-model="sendmsg.video.title">
+                        <label>视频描述</label>
+                        <input type="text" class="form-control" v-model="sendmsg.video.description">
+                        <label>视频素材id</label>
+                        <input type="text" class="form-control" v-model="sendmsg.video.mediaId">
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='music'">
+                        <label>音乐标题</label>
+                        <input type="text" class="form-control" v-model="sendmsg.music.title">
+                        <label>音乐描述</label>
+                        <input type="text" class="form-control" v-model="sendmsg.music.description">
+                        <label>音乐链接</label>
+                        <input type="text" class="form-control" v-model="sendmsg.music.musicUrl">
+                        <label>缩略图素材id</label>
+                        <input type="text" class="form-control" v-model="sendmsg.music.thumbMediaId">
+                    </div>
+                    <div class="form-group" v-if="sendmsg.type=='mpnews'">
+                        <label>图文素材id</label>
+                        <input type="text" class="form-control" v-model="sendmsg.mpnews.mediaId">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" ref="closesend">取消</button>
+                    <button type="button" class="btn btn-primary" @click="sendMsg()">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="groupModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>分组</label>
+                        <select v-model="newgroup" class="form-control">
+                            <option v-for="option in grouplist" :value="option.value">
+                                {{ option.text }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" ref="groupend">取消</button>
+                    <button type="button" class="btn btn-primary" @click="groupMove()">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    new Vue({
+        el: '#userlist',
+        data() {
+            return {
+                totalpage: 0,
+                page: 1,
+                msg: '',
+                batchstate: '',
+                newremark: '',
+                openids: [],
+                grouplist:[],
+                newgroup:'',
+                sendmsg: {
+                    type: 'text',
+                    text: {
+                        content: ''
+                    },
+                    image: {
+                        media_id: '',
+                    },
+                    voice: {
+                        media_id: '',
+                    },
+                    video: {
+                        title: '',
+                        description: '',
+                        media_id: ''
+                    },
+                    music: {
+                        title: '',
+                        description: '',
+                        musicUrl: '',
+                        thumbMediaId: ''
+                    },
+                    mpnews: {
+                        media_id: ''
+                    },
+                },
+                typeoptions: [
+                    {text: '文本消息', value: 'text'},
+                    {text: '图片消息', value: 'image'},
+                    {text: '语音消息', value: 'voice'},
+                    {text: '视频消息', value: 'video'},
+                    {text: '音乐消息', value: 'music'},
+                    {text: '图文消息', value: 'mpnews'}
+                ]
+            };
+        },
+        created() {
+            var that = this;
+            that.$http.post('/user/outputlist', {page: that.page}).then(response => {
+                that.msg = response.body.user_info_list;
+                that.totalpage = Math.ceil(parseInt(response.body.total) / parseInt(response.body.limit));
+                that.msg.forEach((msg)=> {
+                    that.$set(msg, 'modify', 'false');
+                })
+            }, response => {
+                alert('请求失败');
+            });
+            that.$http.post('/group/outputgroup', {page: 0}).then(response => {
+                var grouplist = response.body.groups;
+                grouplist.forEach((item)=>{
+                    var obj = {};
+                    obj.value = item.id;
+                    obj.text = item.name;
+                    that.grouplist.push(obj);
+                })
+                that.newgroup = that.grouplist[0].value;
+            }, response => {
+                alert('请求失败');
+            });
+        },
+        methods: {
+            remarking(){
+                alert('备注中');
+            },
+            updateremark(id, remark, index){
+                var that = this;
+                if (that.newremark.trim() == '') {
+                    that.$set(that.msg[index], 'modify', 'false');
+                } else {
+                    that.$http.post('/user/updateremark', {id: id, remark: remark}).then(response => {
+                        if (response.body.errcode == 0) {
+                            that.$set(that.msg[index], 'modify', 'false');
+                            that.$set(that.msg[index], 'remark', remark);
+                            that.newremark = '';
+                            alert('修改成功');
+                        } else {
+                            alert('修改失败')
+                        }
+                    }, response => {
+                        alert('修改失败');
+                    });
+                }
+            },
+            showremark(index){
+                var that = this;
+                that.msg.forEach((msg)=> {
+                    that.$set(msg, 'modify', 'false');
+                })
+                that.$set(that.msg[index], 'modify', 'true');
+            },
+            batchBlack(){
+                var that = this;
+                that.$http.post('/user/black', {openid: that.openids}).then(response => {
+                    if (response.body.errcode == 0) {
+                        alert('拉黑成功');
+                        that.openids = [];
+                    } else {
+                        alert('拉黑失败');
+                    }
+                }, response => {
+                    alert('拉黑失败');
+                });
+            },
+            groupMove(){
+                var that = this;
+                that.$http.post('/group/batchadd', {id: that.newgroup, openids: that.openids}).then(response => {
+                    if (response.body.errcode == 0) {
+                        alert('移入分组成功');
+                        that.openids.forEach((item)=>{
+                            that.msg.forEach((newitem)=>{
+                                if(item==newitem.openid){
+                                    newitem.groupid = that.newgroup;
+                                }
+                            })
+                        })
+                        that.openids = [];
+                        that.newgroup = that.grouplist[0].value;
+                        that.$refs.groupend.click();
+                    } else {
+                        alert('移入分组失败');
+                    }
+                }, response => {
+                    alert('移入分组失败');
+                });
+            },
+            sendMsg() {
+                var that = this;
+                var msg;
+                if (that.sendmsg.type == 'text') {
+                    msg = that.sendmsg.text;
+                } else if (that.sendmsg.type == 'image') {
+                    msg = that.sendmsg.sendmsg.image;
+                } else if (that.sendmsg.type == 'voice') {
+                    msg = that.sendmsg.sendmsg.voice;
+                } else if (that.sendmsg.type == 'video') {
+                    msg = that.sendmsg.sendmsg.video;
+                } else if (that.sendmsg.type == 'music') {
+                    msg = that.sendmsg.music;
+                } else if (that.sendmsg.type == 'mpnews') {
+                    msg = that.sendmsg.mpnews;
+                }
+                that.$http.post('/user/send', {type: that.sendmsg.type, msg: msg, openids: that.openids}).then(response => {
+                    if (response.body.errcode == 0) {
+                        alert('发送成功');
+                        that.openids = [];
+                        that.sendmsg.text.content = '';
+                        that.sendmsg.image.media_id = '';
+                        that.sendmsg.voice.media_id = '';
+                        that.sendmsg.video.title = '';
+                        that.sendmsg.video.description = '';
+                        that.sendmsg.video.media_id = '';
+                        that.sendmsg.music.title = '';
+                        that.sendmsg.music.description = '';
+                        that.sendmsg.music.musicUrl = '';
+                        that.sendmsg.music.thumbMediaId = '';
+                        that.sendmsg.mpnews.media_id = '';
+                        that.$refs.closesend.click();
+                    } else {
+                        alert('发送失败');
+                    }
+                }, response => {
+                    alert('发送失败');
+                });
+            },
+            sendOneInit(openid){
+                var that = this;
+                var openid = openid;
+                that.openids = [openid];
+            },
+            batchInit(){
+                var that = this;
+                if (that.openids.length == 0) {
+                    that.batchstate = ''
+                    alert('请选择用户');
+                } else {
+                    that.batchstate = 'modal';
+                }
+            },
+            doblack(openid, index){
+                var that = this;
+                that.$http.post('/user/black', {openid: openid}).then(response => {
+                    if (response.body.errcode == 0) {
+                        alert('拉黑成功');
+                        that.msg.splice(index, 1);
+                    } else {
+                        alert('拉黑失败');
+                    }
+                }, response => {
+                    alert('拉黑失败');
+                });
+            },
+            gotoPage(page){
+                var that = this;
+                if (page < 1) {
+                    alert('当前已经是第一页');
+                    return false;
+                } else if (page > that.totalpage) {
+                    alert('当前已经是最后一页');
+                    return false;
+                } else if (page == that.page) {
+                    alert('已是当前页');
+                    return false;
+                } else {
+                    that.$http.post('/user/outputlist', {page: page}).then(response => {
+                        that.msg = response.body;
+                        that.page = page;
+                    }, response => {
+                        alert('请求失败');
+                    });
+                }
+            }
+        },
+        filters: {
+            formatTime(value) {
+                return moment(parseInt(value) * 1000).format('YYYY/MM/DD')
+            }
+        }
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="menuupdate">
+    <div class="form-group">
+        <label>模板名称</label>
+        <input type="text" class="form-control" v-model="all.menunametpl">
+    </div>
+    <div class="form-group">
+        <label>模板说明</label>
+        <input class="form-control" type="text" v-model="all.menuexplaintpl">
+    </div>
+    <div class="row">
+        <div class="col-md-4" v-for="(item, index) in all.button">
+            <div class="form-group">
+                <label>菜单级别</label>
+                <select v-model="item.menuselected" class="form-control">
+                    <option v-for="option in menuoptions" v-bind:value="option.value">
+                        {{ option.text }}
+                    </option>
+                </select>
+            </div>
+            <div class="form-box">
+                <div class="form-group">
+                    <label>一级菜单名称</label>
+                    <input type="text" class="form-control" v-model="item.name">
+                </div>
+                <div class="form-group" v-if="item.menuselected == 0">
+                    <label>菜单类型</label>
+                    <select v-model="item.type" class="form-control">
+                        <option v-for="option in typeoptions" v-bind:value="option.value">
+                            {{ option.text }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group" v-if="item.type == 'view' && item.menuselected == 0">
+                    <label>跳转地址</label>
+                    <input type="text" class="form-control" v-model="item.url">
+                </div>
+                <div class="form-group" v-if="item.type != 'media_id' && item.type != 'view' && item.menuselected == 0">
+                    <label>key</label>
+                    <input type="text" class="form-control" v-model="item.key">
+                </div>
+                <div class="form-group" v-if="item.type == 'media_id' || item.type == 'view_limited' && item.menuselected == 0">
+                    <label>media_id</label>
+                    <input type="text" class="form-control" v-model="item.meida_id">
+                </div>
+            </div>
+
+            <div class="form-box" v-for="menu in item.sub_button" v-if="item.menuselected == 1">
+                <div class="form-group">
+                    <label>二级菜单名称</label>
+                    <input type="text" class="form-control" v-model="menu.name">
+                </div>
+                <div class="form-group">
+                    <label>菜单类型</label>
+                    <select v-model="menu.type" class="form-control">
+                        <option v-for="option in typeoptions" v-bind:value="option.value">
+                            {{ option.text }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group" v-if="menu.type == 'view' && item.menuselected == 1">
+                    <label>跳转地址</label>
+                    <input type="text" class="form-control" v-model="menu.url">
+                </div>
+                <div class="form-group" v-if="menu.type != 'media_id' && menu.type != 'view' && item.menuselected == 1">
+                    <label>key</label>
+                    <input type="text" class="form-control" v-model="menu.key">
+                </div>
+                <div class="form-group" v-if="menu.type == 'media_id' || menu.type == 'view_limited' && item.menuselected == 1">
+                    <label>media_id</label>
+                    <input type="text" class="form-control" v-model="menu.media_id">
+                </div>
+            </div>
+            <div class="clearfix margin-tb-20">
+                <button type="button" class="btn btn-primary pull-right" v-if="item.sub_button.length < 5 && item.menuselected == 1" @click="createSecondMenu(index)">新增二级菜单</button>
+                <button type="button" class="btn btn-primary pull-left" v-if="item.sub_button.length > 0" @click="deleteSecondMenu(index)">删除二级菜单</button>
+            </div>
+        </div>
+    </div>
+    <div class="btn btn-primary btn-lg btn-block" @click="msgSubmit()">提交</div>
+</div>
+<script>
+    new Vue({
+        el: '#menuupdate',
+        data: {
+            all: {},
+            menuoptions: [
+                {text: '创建一级菜单', value: '0'},
+                {text: '创建二级菜单', value: '1'}
+            ],
+            typeoptions: [
+                {text: '点击推送信息', value: 'click'},
+                {text: '点击跳转页面', value: 'view'},
+                {text: '调用扫一扫(无提示)', value: 'scancode_push'},
+                {text: '调用扫一扫(有提示)', value: 'scancode_waitmsg'},
+                {text: '仅调用相机', value: 'pic_sysphoto'},
+                {text: '调用相机或相册', value: 'pic_photo_or_album'},
+                {text: '调用微信相册', value: 'pic_weixin'},
+                {text: '上传地理位置', value: 'location_select'},
+                {text: '获取服务器素材', value: 'media_id'},
+                {text: '跳转图文页面', value: 'view_limited'},
+            ],
+        },
+        created() {
+            var that = this;
+            var ourl = document.URL;
+            var id = ourl.split("/menu/update/")[1];
+            that.$http.post('/menu/loadmenu', {id: id}).then(response => {
+                that.all = response.body;
+            }, response => {
+                alert('请求失败');
+            });
+        },
+        methods: {
+            msgSubmit(){
+                var all = this.all;
+                this.$http.post('/menu/doupdate', all).then(response => {
+                    if (response.body.errcode == 0) {
+                        alert('更新成功');
+                        window.location = '/menu/list'
+                    } else {
+                        alert('更新失败');
+                    }
+                }, response => {
+                    alert('更新失败');
+                });
+            },
+            createSecondMenu(menu){
+                var that = this;
+                if (that.all.button[menu].sub_button.length < 5) {
+                    that.all.button[menu].sub_button.push({
+                        type: 'click',
+                        name: '',
+                        key: '',
+                        media_id: '',
+                        url: ''
+                    })
+                } else {
+                    alert('已达到上限');
+                }
+            },
+            deleteSecondMenu(menu){
+                var that = this;
+                if (that.all.button[menu].sub_button.length != 0) {
+                    that.all.button[menu].sub_button.splice(that.all.button[menu].sub_button.length - 1, 1)
+                } else {
+                    alert('已达到上限');
+                }
+            }
+        }
+    })
+</script>

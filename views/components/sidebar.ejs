@@ -1,0 +1,104 @@
+<div class="sidebarBox" id="sidebarBox">
+    <div class="nav-header">
+        <% if (admin) { %>
+        <span class="name"><%= admin.name %></span>
+        <span class="badge">超级管理员</span>
+        <div class="account">
+            <a href="/admin/dosignin" class="link">切换账号</a>
+            <a href="/admin/dologout" class="link">登出</a>
+        </div>
+        <% } %>
+    </div>
+    <ul class="sidebar">
+        <li>
+            <a href="/" class="link"><i class="glyphicon glyphicon-home"></i>主页<i class="glyphicon"></i></a>
+        </li>
+        <li :class="{'active':highlight=='receive'}">
+            <a href="javascript:void(0);" @click="switchmenu('receive')" class="link"><i class="glyphicon glyphicon-envelope"></i>消息管理<i class="glyphicon glyphicon-menu-right" :class="{'glyphicon-menu-down':highlight=='receive'}"></i></a>
+            <ul class="sidebar-child">
+                <li><a href="/keyreply/list" class="link">关键字回复</a></li>
+                <li><a href="/followreply/list" class="link">新关注回复</a></li>
+
+                <!--<li><a href="receive/uploadlocation" class="link">上报地理位置</a></li>-->
+                <!--<li><a href="receive/clickmenu" class="link">点击菜单</a></li>-->
+                <!--<li><a href="receive/clickmenugo" class="link">点击菜单后跳转</a></li>-->
+                <!--<li><a href="receive/text" class="link">接收文本信息</a></li>-->
+                <!--<li><a href="receive/image" class="link">接收图片信息</a></li>-->
+                <!--<li><a href="receive/voice" class="link">接收语音信息</a></li>-->
+                <!--<li><a href="receive/video" class="link">接收视频信息</a></li>-->
+                <!--<li><a href="receive/shortvideo" class="link">接收小视频信息</a></li>-->
+                <!--<li><a href="receive/location" class="link">接收位置信息</a></li>-->
+                <!--<li><a href="receive/link" class="link">接收链接信息</a></li>-->
+            </ul>
+        </li>
+        <li :class="{'active':highlight=='material'}">
+            <a href="javascript:void(0);" @click="switchmenu('material')" class="link"><i class="glyphicon glyphicon-grain"></i>素材管理<i class="glyphicon glyphicon-menu-right" :class="{'glyphicon-menu-down':highlight=='material'}"></i></a>
+            <ul class="sidebar-child">
+                <li><a href="/material/list" class="link">素材列表</a></li>
+            </ul>
+        </li>
+        <li :class="{'active':highlight=='group'}">
+            <a href="javascript:void(0);" @click="switchmenu('group')" class="link"><i class="glyphicon glyphicon-user"></i>用户管理<i class="glyphicon glyphicon-menu-right"></i></a>
+            <ul class="sidebar-child">
+                <li><a href="/user/list" class="link">用户列表</a></li>
+                <li><a href="/group/list" class="link">分组管理</a></li>
+                <li><a href="/user/blacklist" class="link">黑名单管理</a></li>
+            </ul>
+        </li>
+        <li :class="{'active':highlight=='shorturl' || highlight=='qrcode'}">
+            <a href="javascript:void(0);" @click="switchmenu('shorturl')" class="link"><i class="glyphicon glyphicon-cloud"></i>账号管理<i class="glyphicon glyphicon-menu-right" :class="{'glyphicon-menu-down':highlight=='shorturl'||highlight=='qrcode'}"></i></a>
+            <ul class="sidebar-child">
+                <li><a href="/qrcode/list" class="link">生成参数二维码</a></li>
+                <li><a href="/shorturl/list" class="link">长链接转短链接</a></li>
+            </ul>
+        </li>
+        <li :class="{'active':highlight=='menu'}">
+            <a href="javascript:void(0);" @click="switchmenu('menu')" class="link"><i class="glyphicon glyphicon-menu-hamburger"></i>菜单管理<i class="glyphicon glyphicon-menu-right" :class="{'glyphicon-menu-down':highlight=='menu'}"></i></a>
+            <ul class="sidebar-child">
+                <li><a href="/menu/create" class="link">创建菜单</a></li>
+                <li><a href="/menu/list" class="link">菜单列表</a></li>
+            </ul>
+        </li>
+    </ul>
+</div>
+<script>
+    new Vue({
+        el: '#sidebarBox',
+        data() {
+            return {
+                highlight: ''
+            }
+        },
+        methods: {
+            switchmenu(type){
+                var that = this;
+                if(that.highlight==type){
+                    that.highlight = '';
+                }else{
+                    that.highlight = type;
+                }
+            }
+        },
+        created() {
+            var that = this;
+            var nowurl = document.URL;
+            if (nowurl.indexOf('menu') != -1) {
+                that.highlight = 'menu';
+            } else if (nowurl.indexOf('receive') != -1) {
+                that.highlight = 'receive';
+            } else if (nowurl.indexOf('material') != -1) {
+                that.highlight = 'material';
+            } else if (nowurl.indexOf('qrcode') != -1) {
+                that.highlight = 'qrcode';
+            } else if (nowurl.indexOf('shorturl') != -1) {
+                that.highlight = 'shorturl';
+            } else if (nowurl.indexOf('group') != -1) {
+                that.highlight = 'group';
+            } else{
+                that.highlight = '';
+            }
+        },
+    })
+</script>
+</body>
+</html>

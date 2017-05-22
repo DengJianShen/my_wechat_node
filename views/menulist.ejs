@@ -1,0 +1,134 @@
+<%- include('./components/head') %>
+<%- include('./components/sidebar') %>
+<div class="wrapper" id="menulist">
+    <table class="table">
+        <thead>
+        <tr>
+        <th>模板名称</th>
+        <th>模板说明</th>
+        <th>菜单一</th>
+        <th>菜单二</th>
+        <th>菜单三</th>
+        <th>创建时间</th>
+        <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item,index) in menus">
+            <td>{{item.menunametpl}}</td>
+            <td>{{item.menuexplaintpl}}</td>
+            <td>{{item.button[0].name}}</td>
+            <td>{{item.button[1].name}}</td>
+            <td>{{item.button[2].name}}</td>
+            <td>{{item.meta.createAt | formatTime }}</td>
+            <td>
+                <div class="btn-group">
+                    <button v-if="item.using==0" class="btn btn-primary btn-outline" @click="douse(item._id,index)">未应用</button>
+                    <button v-else class="btn btn-success btn-outline" @click="douseTip()">已应用</button>
+                    <button class="btn btn-warning btn-outline" @click="gotoUpdate(item._id)">编辑</button>
+                    <button class="btn btn-danger btn-outline" @click="dodelete(item._id,index)">删除</button>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <nav aria-label="..." class="common-pagination">
+        <ul class="pagination">
+            <li><span @click="gotoPage(page-1)">«</span></li>
+            <li v-for="n in totalpage" :class="{'active':n==page}"><span @click="gotoPage(n)">{{n}}</span></li>
+            <li><span @click="gotoPage(page+1)">»</span></li>
+        </ul>
+    </nav>
+</div>
+<script>
+    new Vue({
+        el: '#menulist',
+        data() {
+            return {
+                totalpage: 0,
+                page: 1,
+                menus: ''
+            };
+        },
+        created() {
+            var that = this
+            that.$http.post('/menu/outputlist',{page:1}).then(response => {
+                that.totalpage = response.body.totalpage;
+                that.menus = response.body.menus;
+            }, response => {
+                alert('请求失败');
+            });
+        },
+        methods:{
+            gotoPage(page){
+                var that = this;
+                if (page < 1){
+                    alert('当前已经是第一页');
+                    return false
+                } else if (page > that.totalpage){
+                    alert('当前已经是最后一页');
+                    return false
+                } else if(page == that.page){
+                    alert('已经是当前页');
+                    return false
+                } else {
+                    that.$http.post('/menu/outputlist',{page:page}).then(response => {
+                        that.totalpage = response.body.totalpage;
+                        that.menus = response.body.menus;
+                        that.page = page;
+                    }, response => {
+                        alert('请求失败');
+                    });
+                }
+            },
+            gotoUpdate(id){
+                window.location = `/menu/update/${id}`
+            },
+            dodelete(id,index){
+                var that = this;
+                if(that.menus[index].using != 1){
+                    this.$http.post('/menu/dodelete',{id:id}).then(response => {
+                        if(response.body.errcode==0){
+                            alert('删除成功');
+                            var menus = that.menus;
+                            menus.splice(index,1);
+                        }else{
+                            alert('删除失败');
+                        }
+                    }, response => {
+                        alert('删除失败');
+                    });
+                } else {
+                    alert('使用中,无法删除');
+                }
+            },
+            douse(id,index){
+                var that = this;
+                this.$http.post('/menu/douse',{id:id}).then(response => {
+                    if(response.body.errcode==0){
+                        alert('启用成功');
+                        var menus = that.menus;
+                        menus.forEach((menu) => {
+                            menu.using = 0;
+                        });
+                        menus[index].using = 1;
+                    } else {
+                        alert('启用失败');
+                    }
+                }, response => {
+                    alert('启用失败');
+                });
+            },
+            douseTip(){
+                alert('你已启用');
+            }
+        },
+        filters: {
+            formatTime: function (value) {
+                return moment(value).format('YYYY/MM/DD')
+            }
+        }
+    })
+</script>
+</body>
+</html>
